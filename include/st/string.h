@@ -6,28 +6,29 @@ namespace ST
 {
 namespace String
 {
-    inline bool isSpace(char c) { return c == ' ' || c == '\t'; }
+    inline bool isSpace(char c) noexcept { return c == ' ' || c == '\t'; }
     
-    inline bool isNewline(char c) { return c == '\r' || c == '\n'; }
+    inline bool isNewline(char c) noexcept { return c == '\r' || c == '\n'; }
     
-    inline bool isNum(char c) { return c >= '0' && c <= '9'; }
+    inline bool isNum(char c) noexcept { return c >= '0' && c <= '9'; }
     
-    inline bool isLetter(char c) { return (c >= 'a' && c <= 'z') || 
+    inline bool isLetter(char c) noexcept { return (c >= 'a' && c <= 'z') || 
                                           (c >= 'A' && c <= 'Z'); }
     
-    inline uint8_t toInt(char c) { return isNum(c) ? c - '0' : c; }
+    inline uint8_t toInt(char c) noexcept { return isNum(c) ? c - '0' : c; }
 
-    inline bool toFloat(const char* str, uint32_t len, float& out_value)
+    inline bool toFloat(const char* const begin, const char* const end, float& out_value) noexcept
     {
-        if (len == 0) return false;
+        if (begin >= end) return false;
 
         // scan for trailing spaces
-        int32_t start_pos = 0;
-        for (int32_t i = 0; i < len; i++)
+        const char* start_pos = 0;
+
+        for (const char* p = begin; p <= end; p++)
         {
-            if (!isSpace(str[i]))
+            if (!isSpace(*p))
             {
-                start_pos = i;
+                start_pos = p;
                 break;
             }
         }
@@ -35,9 +36,9 @@ namespace String
         // check for a sign
         bool is_negative = false;
 
-        if (str[start_pos] == '-' || str[start_pos] == '+')
+        if (*start_pos == '-' || *start_pos == '+')
         {
-            is_negative = (str[start_pos] == '-');
+            is_negative = (*start_pos == '-');
             start_pos++;
         }
 
@@ -48,26 +49,26 @@ namespace String
         //uint32_t payload_len = (stop_pos - start_pos) + 1;
 
         // check if every char is a digit and by the way find dot position
-        int32_t dot_pos = -1; // use this value as a mark for not found dot
+        const char* dot_pos = nullptr; // use this value as a mark for not found dot
 
-        int32_t stop_pos = len - 1;
-        for (int32_t i = start_pos; i < len; i++)
+        const char* stop_pos = nullptr;
+        for (const char* p = start_pos; p <= end; p++)
         {
-            if (!isNum(str[i]))
+            if (!isNum(*p))
             {
-                if (str[i] == '.' && dot_pos == -1)
+                if (*p == '.' && dot_pos == nullptr)
                 {
-                    dot_pos = i;
+                    dot_pos = p;
                     continue;
                 }
 
-                stop_pos = i - 1;
+                stop_pos = p - 1;
                 break;
             }
         }
 
         // if dot was found, check if it's not on first or last char
-        if ((dot_pos != -1) &&
+        if ((dot_pos != nullptr) &&
             (dot_pos == start_pos || dot_pos == stop_pos))
         {
             return false;
@@ -78,26 +79,33 @@ namespace String
         float result = 0.0f;
 
         uint32_t n = 0; // index of current digit
-        for (int32_t i = (dot_pos == -1 ? stop_pos : dot_pos - 1); i >= start_pos; i--)
+        for (const char* p = (dot_pos ? dot_pos - 1 : stop_pos); 
+             p >= start_pos; p--)
         {
-            result += toInt(str[i]) * ST::Math::pow(10, n);
+            result += toInt(*p) * ST::Math::pow(10, n);
             n++;
         }
 
         // if we have a dot
-        if (dot_pos != -1)
+        if (dot_pos)
         {
             // the same but in reverse for remaining part
             n = 1;
-            for (int32_t i = dot_pos + 1; i <= stop_pos; i++)
+            for (const char* p = dot_pos + 1; p <= stop_pos; p++)
             {
-                result += (float)toInt(str[i]) / ST::Math::pow(10, n);
+                result += (float)toInt(*p) / ST::Math::pow(10, n);
                 n++;
             }
         }
 
         out_value = is_negative ? result * -1.0f : result;
         return true;
+    }
+
+    
+    inline bool toFloat(const char* const str, const uint32_t len, float& out_value) noexcept
+    {
+        return toFloat(str, str + len, out_value);
     }
 }
 }
